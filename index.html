@@ -90,7 +90,7 @@
             white-space: nowrap;
         }
 
-        /* ===== 牛郎星 & 织女星 独立样式 ===== */
+        /* ===== 星星标签样式 ===== */
         .star-label {
             position: absolute;
             color: rgba(255,255,200,0.85);
@@ -126,12 +126,13 @@
             transform: scale(0.95);
         }
 
-        /* 织女星独立微调（确保完整显示） */
+        /* ===== 织女星独立修复：更大内边距 + 独立字体 + 更靠左 ===== */
         #labelVega {
-            /* 增加一点右侧内边距，防止边缘裁剪 */
-            padding-right: 20px;
-            /* 如果屏幕特别窄，允许稍微缩小字体，但绝不换行 */
-            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            padding: 6px 22px 6px 18px !important;  /* 右侧留更多空间 */
+            font-size: clamp(0.95rem, 2.3vw, 1.15rem) !important;
+            letter-spacing: 2px !important;
+            /* 位置向左移动，避免被右侧裁剪 */
+            right: 10% !important;
         }
 
         #music-control {
@@ -186,9 +187,9 @@
 
     <div id="hint">✨ 点击星星 → 专属照片 &nbsp;|&nbsp; 点击画布 → 流星雨</div>
 
-    <!-- 牛郎星 & 织女星：独立定位，织女星增加右侧安全距离 -->
+    <!-- 牛郎星 & 织女星 -->
     <div class="star-label" id="labelAltair" style="top:12%; left:10%;">⭐ 牛郎星</div>
-    <div class="star-label" id="labelVega" style="bottom:18%; right:6%;">⭐ 织女星</div>
+    <div class="star-label" id="labelVega">⭐ 织女星</div>
 
     <div id="music-control" title="点击播放/暂停音乐">🔇</div>
 
@@ -239,7 +240,7 @@
         });
 
         // ============================================================
-        //  2. 画布与流星动画 (持续下流星 + 100%爱心)
+        //  2. 画布与流星动画 (永久持续，不受任何操作影响)
         // ============================================================
         var canvas = document.getElementById('canvas');
         var ctx = canvas.getContext('2d');
@@ -249,13 +250,13 @@
         canvas.height = H;
 
         var starAltair = { x: W * 0.12, y: H * 0.15 };
-        var starVega = { x: W * 0.88, y: H * 0.78 };
+        var starVega = { x: W * 0.85, y: H * 0.78 };
 
         function updateStarLabels() {
             var l1 = document.getElementById('labelAltair');
             var l2 = document.getElementById('labelVega');
             if (l1) { l1.style.left = (starAltair.x - 40) + 'px'; l1.style.top = (starAltair.y - 30) + 'px'; }
-            if (l2) { l2.style.left = (starVega.x - 40) + 'px'; l2.style.top = (starVega.y - 30) + 'px'; }
+            if (l2) { l2.style.left = (starVega.x - 50) + 'px'; l2.style.top = (starVega.y - 30) + 'px'; }
         }
         updateStarLabels();
 
@@ -270,7 +271,7 @@
             this.life = 1;
             this.decay = 0.004 + Math.random() * 0.012;
             this.active = true;
-            this.hasHeart = true; // 100%带爱心
+            this.hasHeart = true;
         }
 
         Meteor.prototype.update = function() {
@@ -306,7 +307,7 @@
             ctx.fill();
 
             // 每颗流星都带爱心
-            if (this.life > 0.4) {
+            if (this.life > 0.3) {
                 ctx.font = '16px Arial';
                 ctx.fillStyle = '#ff4d7a';
                 ctx.shadowBlur = 20;
@@ -343,30 +344,57 @@
             }
         }
 
-        // 初始流星 (打开页面就有)
-        for (var i = 0; i < 20; i++) {
+        // ============================================================
+        //  核心修复：永久持续的流星生成 (每500ms生成一颗)
+        //  完全独立，不受点击、图片显示等任何操作影响
+        // ============================================================
+        // 1. 初始大量流星 (打开页面就有50颗)
+        for (var i = 0; i < 50; i++) {
             (function(i) {
                 setTimeout(function() {
                     var x = Math.random() * W;
-                    var y = Math.random() * H * 0.15;
-                    var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.5 - 0.25), 5 + Math.random() * 8, 70 + Math.random() * 50);
-                    m.decay = 0.005 + Math.random() * 0.01;
+                    var y = Math.random() * H * 0.2;
+                    var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.6 - 0.3), 5 + Math.random() * 10, 70 + Math.random() * 60);
+                    m.decay = 0.004 + Math.random() * 0.012;
                     meteors.push(m);
-                }, i * 150);
+                }, i * 80);
             })(i);
         }
 
-        // ---------- 持续生成流星 (每隔1秒自动生成2-3颗) ----------
+        // 2. 永久循环：每500ms生成一颗流星，永不停止
         setInterval(function() {
-            var count = 2 + Math.floor(Math.random() * 3);
-            for (var i = 0; i < count; i++) {
-                var x = Math.random() * W * 0.9 + W * 0.05;
-                var y = Math.random() * H * 0.2;
-                var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.6 - 0.3), 6 + Math.random() * 10, 80 + Math.random() * 60);
-                m.decay = 0.004 + Math.random() * 0.01;
+            var x = Math.random() * W * 0.9 + W * 0.05;
+            var y = Math.random() * H * 0.2;
+            var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.6 - 0.3), 6 + Math.random() * 10, 80 + Math.random() * 60);
+            m.decay = 0.004 + Math.random() * 0.012;
+            meteors.push(m);
+        }, 500);
+
+        // 3. 点击画布额外触发流星雨爆发 (不影响持续流星的自动生成)
+        canvas.addEventListener('click', function(e) {
+            createShower(45);
+            for (var i = 0; i < 20; i++) {
+                var angle = Math.random() * Math.PI * 2;
+                var speed = 3 + Math.random() * 7;
+                var len = 50 + Math.random() * 60;
+                var hue = 330 + Math.random() * 30;
+                var m = new Meteor(e.clientX, e.clientY, angle, speed, len, 'hsl(' + hue + ', 90%, 70%)');
+                m.decay = 0.02 + Math.random() * 0.025;
                 meteors.push(m);
             }
-        }, 1000);
+            starAltair.x = W * 0.12 + (Math.random() - 0.5) * 40;
+            starAltair.y = H * 0.15 + (Math.random() - 0.5) * 30;
+            starVega.x = W * 0.85 + (Math.random() - 0.5) * 40;
+            starVega.y = H * 0.78 + (Math.random() - 0.5) * 30;
+            updateStarLabels();
+
+            var msg = document.getElementById('message');
+            msg.innerHTML = '<span>🌠 流星雨 · 爱意永不停</span>';
+            msg.style.opacity = 1;
+            setTimeout(function() {
+                msg.style.opacity = 0;
+            }, 2000);
+        });
 
         // ---------- 展示照片 ----------
         var photoTimer = null;
@@ -396,32 +424,7 @@
             }, 4000);
         }
 
-        // ---------- 点击事件 ----------
-        canvas.addEventListener('click', function(e) {
-            createShower(45);
-            for (var i = 0; i < 20; i++) {
-                var angle = Math.random() * Math.PI * 2;
-                var speed = 3 + Math.random() * 7;
-                var len = 50 + Math.random() * 60;
-                var hue = 330 + Math.random() * 30;
-                var m = new Meteor(e.clientX, e.clientY, angle, speed, len, 'hsl(' + hue + ', 90%, 70%)');
-                m.decay = 0.02 + Math.random() * 0.025;
-                meteors.push(m);
-            }
-            starAltair.x = W * 0.12 + (Math.random() - 0.5) * 40;
-            starAltair.y = H * 0.15 + (Math.random() - 0.5) * 30;
-            starVega.x = W * 0.88 + (Math.random() - 0.5) * 40;
-            starVega.y = H * 0.78 + (Math.random() - 0.5) * 30;
-            updateStarLabels();
-
-            var msg = document.getElementById('message');
-            msg.innerHTML = '<span>🌠 流星雨 · 爱意永不停</span>';
-            msg.style.opacity = 1;
-            setTimeout(function() {
-                msg.style.opacity = 0;
-            }, 2000);
-        });
-
+        // ---------- 点击星星 ----------
         document.getElementById('labelAltair').addEventListener('click', function(e) {
             e.stopPropagation();
             createShower(20);
@@ -486,7 +489,7 @@
             canvas.width = W;
             canvas.height = H;
             starAltair = { x: W * 0.12, y: H * 0.15 };
-            starVega = { x: W * 0.88, y: H * 0.78 };
+            starVega = { x: W * 0.85, y: H * 0.78 };
             updateStarLabels();
         });
 
