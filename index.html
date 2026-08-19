@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 七夕 · 牛郎织女</title>
+    <style>
+        * { margin: 0; padding: 0; overflow: hidden; }
+        body {
+            background: #0a0518;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+        }
+        canvas { display: block; cursor: pointer; }
+
+        /* ---------- 浮层样式 ---------- */
+        #message {
+            position: absolute;
+            color: #ffe6f0;
+            font-size: 2.2rem;
+            text-shadow: 0 0 30px rgba(255,100,150,0.9), 0 0 60px rgba(255,50,100,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 4px;
+            line-height: 1.6;
+            width: 80%;
+            max-width: 700px;
+            z-index: 10;
+        }
+        #message span { display: inline-block; animation: twinkle 1.8s infinite alternate; }
+        @keyframes twinkle { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* 照片展示框 */
+        #photo-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 70%;
+            max-width: 500px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 20;
+            border-radius: 24px;
+            box-shadow: 0 0 60px rgba(255,100,150,0.6), 0 0 120px rgba(255,50,100,0.3);
+            border: 4px solid rgba(255,200,230,0.8);
+            background: rgba(255,240,245,0.1);
+            backdrop-filter: blur(8px);
+            padding: 12px;
+        }
+        #photo-frame.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        #photo-frame img {
+            width: 100%;
+            height: auto;
+            border-radius: 16px;
+            display: block;
+        }
+        #photo-frame .caption {
+            text-align: center;
+            color: #ffe6f0;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(255,100,150,0.5);
+        }
+
+        #hint {
+            position: absolute;
+            bottom: 40px;
+            color: rgba(255,200,230,0.4);
+            font-size: 0.95rem;
+            letter-spacing: 3px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,200,230,0.15);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* 可点击的星星标签 */
+        .star-label {
+            position: absolute;
+            color: rgba(255,255,200,0.85);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(255,200,100,0.8);
+            background: rgba(0,0,0,0.4);
+            padding: 6px 16px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,215,0,0.3);
+            z-index: 15;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        .star-label:hover {
+            background: rgba(255,200,100,0.25);
+            border-color: rgba(255,215,0,0.8);
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255,200,100,0.3);
+        }
+        .star-label:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 祝福文字 -->
+    <div id="message">
+        <span>🌉 鹊桥相会 · 点击星宿</span><br>
+        <span style="font-size:1.6rem;">💕 看看谁在等你</span>
+    </div>
+
+    <!-- 照片展示框 -->
+    <div id="photo-frame">
+        <img id="photoImg" src="" alt="照片">
+        <div id="photoCaption" class="caption">✨ 我们的银河</div>
+    </div>
+
+    <div id="hint">✨ 点击星星 → 专属照片</div>
+
+    <!-- 可点击的星星标签 -->
+    <div class="star-label" id="labelAltair" style="top:12%; left:12%;">⭐ 牛郎星</div>
+    <div class="star-label" id="labelVega" style="bottom:18%; right:10%;">⭐ 织女星</div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // ============================================================
+        //  1. 画布与流星动画
+        // ============================================================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let W = window.innerWidth, H = window.innerHeight;
+        canvas.width = W; canvas.height = H;
+
+        let starAltair = { x: W*0.15, y: H*0.15 };
+        let starVega   = { x: W*0.85, y: H*0.75 };
+
+        function updateStarLabels() {
+            const l1 = document.getElementById('labelAltair');
+            const l2 = document.getElementById('labelVega');
+            l1.style.left = (starAltair.x - 40) + 'px';
+            l1.style.top  = (starAltair.y - 30) + 'px';
+            l2.style.left = (starVega.x - 40) + 'px';
+            l2.style.top  = (starVega.y - 30) + 'px';
+        }
+        updateStarLabels();
+
+        // ---------- 流星类 ----------
+        class Meteor {
+            constructor(x, y, angle, speed, length, color) {
+                this.x = x || Math.random() * W;
+                this.y = y || 0;
+                this.angle = angle || (Math.PI/4) + (Math.random()*0.8 - 0.4);
+                this.speed = speed || 8 + Math.random()*12;
+                this.length = length || 90 + Math.random()*80;
+                this.color = color || `hsl(${320 + Math.random()*30}, 90%, 70%)`;
+                this.life = 1;
+                this.decay = 0.004 + Math.random()*0.012;
+                this.active = true;
+                this.hasHeart = Math.random() > 0.7;
+            }
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.life -= this.decay;
+                if (this.life <= 0 || this.x > W+200 || this.y > H+200) this.active = false;
+            }
+            draw(ctx) {
+                const tail = this.length * this.life;
+                const grad = ctx.createLinearGradient(
+                    this.x, this.y,
+                    this.x - Math.cos(this.angle)*tail,
+                    this.y - Math.sin(this.angle)*tail
+                );
+                grad.addColorStop(0, 'rgba(255,255,255,1)');
+                grad.addColorStop(0.2, this.color);
+                grad.addColorStop(1, 'rgba(255,150,200,0)');
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - Math.cos(this.angle)*tail, this.y - Math.sin(this.angle)*tail);
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 3.5 * this.life;
+                ctx.stroke();
+                ctx.shadowBlur = 30; ctx.shadowColor = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 4*this.life, 0, Math.PI*2);
+                ctx.fillStyle = '#fff9e6'; ctx.fill();
+                if (this.hasHeart && this.life > 0.8) {
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#ff4d7a';
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#ff4d7a';
+                    ctx.fillText('❤️', this.x - 10, this.y - 20);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let meteors = [];
+        const stars = [];
+        for (let i=0; i<200; i++) {
+            stars.push({
+                x: Math.random()*W, y: Math.random()*H,
+                r: 0.5 + Math.random()*2,
+                a: Math.random()*Math.PI*2,
+                speed: 0.01 + Math.random()*0.02
+            });
+        }
+
+        function createShower(count) {
+            count = count || 35;
+            for (let i=0; i<count; i++) {
+                const x = Math.random() * W * 0.8 + W * 0.1;
+                const y = Math.random() * H * 0.3;
+                const angle = Math.PI/4 + (Math.random()*0.8 - 0.4);
+                const speed = 7 + Math.random()*14;
+                const hue = 320 + Math.random()*30;
+                const m = new Meteor(x, y, angle, speed, 80+Math.random()*80, `hsl(${hue}, 90%, 70%)`);
+                m.decay = 0.003 + Math.random()*0.01;
+                meteors.push(m);
+            }
+        }
+
+        // 初始流星
+        for (let i=0; i<15; i++) {
+            setTimeout(() => {
+                const x = Math.random() * W;
+                const y = Math.random() * H * 0.15;
+                const m = new Meteor(x, y, Math.PI/4+(Math.random()*0.5-0.25), 4+Math.random()*6, 70+Math.random()*50);
+                m.decay = 0.006 + Math.random()*0.008;
+                meteors.push(m);
+            }, i*200);
+        }
+
+        // ---------- 展示照片的通用函数 ----------
+        function showPhoto(imgSrc, captionText, showMessage) {
+            const frame = document.getElementById('photo-frame');
+            const img = document.getElementById('photoImg');
+            const cap = document.getElementById('photoCaption');
+            img.src = imgSrc;
+            cap.textContent = captionText || '✨ 我们的银河';
+            frame.classList.add('show');
+
+            if (showMessage) {
+                const msg = document.getElementById('message');
+                msg.innerHTML = showMessage;
+                msg.style.opacity = 1;
+                setTimeout(() => { msg.style.opacity = 0; }, 3500);
+            }
+
+            if (window.photoTimer) clearTimeout(window.photoTimer);
+            window.photoTimer = setTimeout(() => {
+                frame.classList.remove('show');
+            }, 3500);
+        }
+
+        // ---------- 点击事件 ----------
+        // 1. 点击画布 → 只触发流星雨（不再显示合照）
+        canvas.addEventListener('click', function(e) {
+            createShower(45);
+            // 从点击位置散开小流星
+            for (let i=0; i<20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random()*7;
+                const len = 50 + Math.random()*60;
+                const hue = 330 + Math.random()*30;
+                const m = new Meteor(e.clientX, e.clientY, angle, speed, len, `hsl(${hue}, 90%, 70%)`);
+                m.decay = 0.02 + Math.random()*0.025;
+                meteors.push(m);
+            }
+            // 牛郎织女星微动
+            starAltair.x = W*0.15 + (Math.random()-0.5)*40;
+            starAltair.y = H*0.15 + (Math.random()-0.5)*30;
+            starVega.x   = W*0.85 + (Math.random()-0.5)*40;
+            starVega.y   = H*0.75 + (Math.random()-0.5)*30;
+            updateStarLabels();
+
+            // 不再显示合照，只显示一条简短祝福
+            const msg = document.getElementById('message');
+            msg.innerHTML = '<span>🌠 流星划过 · 许愿有你</span>';
+            msg.style.opacity = 1;
+            setTimeout(() => { msg.style.opacity = 0; }, 2000);
+        });
+
+        // 2. 点击牛郎星 → 显示你的照片
+        document.getElementById('labelAltair').addEventListener('click', function(e) {
+            e.stopPropagation();
+            createShower(20);
+            showPhoto(
+                'boy.jpg',
+                '⭐ 牛郎 · 永远等你',
+                '<span>⭐ 牛郎星 · 是我</span><br><span style="font-size:1.6rem;">❤️ 我一直都在</span>'
+            );
+        });
+
+        // 3. 点击织女星 → 显示女朋友的照片
+        document.getElementById('labelVega').addEventListener('click', function(e) {
+            e.stopPropagation();
+            createShower(20);
+            showPhoto(
+                'girl.jpg',
+                '🌠 织女 · 最美遇见',
+                '<span>🌠 织女星 · 是你</span><br><span style="font-size:1.6rem;">💖 我的全部风景</span>'
+            );
+        });
+
+        // ---------- 动画循环 ----------
+        function animate() {
+            ctx.clearRect(0, 0, W, H);
+            const grad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, 600);
+            grad.addColorStop(0, 'rgba(30,20,50,0.3)');
+            grad.addColorStop(0.5, 'rgba(10,5,30,0.5)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+            stars.forEach(s => {
+                s.a += s.speed;
+                const alpha = 0.5 + 0.5 * Math.sin(s.a);
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(255,240,250,${alpha})`;
+                ctx.shadowBlur = 8; ctx.shadowColor = '#ffb6c1';
+                ctx.fill();
+            });
+            ctx.shadowBlur = 0;
+            for (let i=meteors.length-1; i>=0; i--) {
+                const m = meteors[i];
+                if (!m.active) { meteors.splice(i,1); continue; }
+                m.update(); m.draw(ctx);
+            }
+            if (meteors.length < 6 && Math.random() < 0.03) {
+                const m = new Meteor(Math.random()*W, Math.random()*H*0.1, Math.PI/4+(Math.random()*0.6-0.3), 4+Math.random()*8);
+                m.decay = 0.006 + Math.random()*0.01;
+                meteors.push(m);
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', ()=>{
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = W; canvas.height = H;
+            starAltair = { x: W*0.15, y: H*0.15 };
+            starVega   = { x: W*0.85, y: H*0.75 };
+            updateStarLabels();
+        });
+    </script>
+</body>
+</html>
