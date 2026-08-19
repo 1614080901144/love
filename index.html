@@ -16,7 +16,6 @@
         }
         canvas { display: block; cursor: pointer; touch-action: none; }
 
-        /* ---------- 浮层样式 ---------- */
         #message {
             position: absolute;
             color: #ffe6f0;
@@ -36,7 +35,6 @@
         #message span { display: inline-block; animation: twinkle 1.8s infinite alternate; }
         @keyframes twinkle { 0% { opacity: 0.6; } 100% { opacity: 1; } }
 
-        /* 照片展示框 */
         #photo-frame {
             position: absolute;
             top: 50%;
@@ -92,15 +90,15 @@
             white-space: nowrap;
         }
 
-        /* 可点击的星星标签 - 修复文字不换行 */
+        /* ===== 牛郎星 & 织女星 独立样式 ===== */
         .star-label {
             position: absolute;
             color: rgba(255,255,200,0.85);
-            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-size: clamp(0.9rem, 2.2vw, 1.1rem);
             letter-spacing: 1px;
             text-shadow: 0 0 20px rgba(255,200,100,0.8);
             background: rgba(0,0,0,0.5);
-            padding: 6px 16px;
+            padding: 6px 18px;
             border-radius: 30px;
             border: 1px solid rgba(255,215,0,0.3);
             z-index: 15;
@@ -109,8 +107,14 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
-            white-space: nowrap; /* 强制不换行 */
             touch-action: manipulation;
+            /* 关键：由内容决定宽度，绝不换行 */
+            display: inline-block;
+            white-space: nowrap !important;
+            max-width: none !important;
+            width: auto !important;
+            overflow: visible !important;
+            box-sizing: border-box;
         }
         .star-label:hover {
             background: rgba(255,200,100,0.25);
@@ -122,7 +126,14 @@
             transform: scale(0.95);
         }
 
-        /* 音乐控制按钮 */
+        /* 织女星独立微调（确保完整显示） */
+        #labelVega {
+            /* 增加一点右侧内边距，防止边缘裁剪 */
+            padding-right: 20px;
+            /* 如果屏幕特别窄，允许稍微缩小字体，但绝不换行 */
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+        }
+
         #music-control {
             position: absolute;
             top: 20px;
@@ -163,13 +174,11 @@
 </head>
 <body>
 
-    <!-- 祝福文字 -->
     <div id="message">
         <span>🌉 鹊桥相会 · 点击星宿</span><br>
         <span style="font-size:clamp(1rem, 4vw, 1.6rem);">💕 看看谁在等你</span>
     </div>
 
-    <!-- 照片展示框 -->
     <div id="photo-frame">
         <img id="photoImg" src="" alt="照片" onerror="this.style.display='none'">
         <div id="photoCaption" class="caption">✨ 我们的银河</div>
@@ -177,33 +186,28 @@
 
     <div id="hint">✨ 点击星星 → 专属照片 &nbsp;|&nbsp; 点击画布 → 流星雨</div>
 
-    <!-- 可点击的星星标签 -->
+    <!-- 牛郎星 & 织女星：独立定位，织女星增加右侧安全距离 -->
     <div class="star-label" id="labelAltair" style="top:12%; left:10%;">⭐ 牛郎星</div>
-    <div class="star-label" id="labelVega" style="bottom:18%; right:8%;">⭐ 织女星</div>
+    <div class="star-label" id="labelVega" style="bottom:18%; right:6%;">⭐ 织女星</div>
 
-    <!-- 音乐控制按钮 -->
     <div id="music-control" title="点击播放/暂停音乐">🔇</div>
 
-    <!-- 画布 -->
     <canvas id="canvas"></canvas>
 
-    <!-- 音频元素 -->
     <audio id="bg-music" loop preload="auto">
         <source src="music.mp3" type="audio/mpeg">
     </audio>
 
     <script>
         // ============================================================
-        //  1. 音乐控制 (增强稳定版)
+        //  1. 音乐控制
         // ============================================================
         var audio = document.getElementById('bg-music');
         var musicBtn = document.getElementById('music-control');
 
         function toggleMusic() {
             if (audio.paused) {
-                audio.play().catch(function(e) {
-                    console.log('音乐播放被阻止，需要用户交互');
-                });
+                audio.play().catch(function(e) {});
                 musicBtn.textContent = '🎵';
                 musicBtn.classList.add('playing');
             } else {
@@ -218,7 +222,6 @@
             toggleMusic();
         });
 
-        // 任何点击都尝试播放音乐 (绕过自动播放限制)
         document.addEventListener('click', function() {
             if (audio.paused && audio.src) {
                 audio.play().then(function() {
@@ -228,18 +231,15 @@
             }
         });
 
-        // 页面加载时尝试自动播放，失败则静默
         window.addEventListener('load', function() {
             audio.play().then(function() {
                 musicBtn.textContent = '🎵';
                 musicBtn.classList.add('playing');
-            }).catch(function() {
-                console.log('等待用户交互后播放音乐');
-            });
+            }).catch(function() {});
         });
 
         // ============================================================
-        //  2. 画布与流星动画 (增强健壮性)
+        //  2. 画布与流星动画 (持续下流星 + 100%爱心)
         // ============================================================
         var canvas = document.getElementById('canvas');
         var ctx = canvas.getContext('2d');
@@ -259,7 +259,7 @@
         }
         updateStarLabels();
 
-        // ---------- 流星类 ----------
+        // ---------- 流星类 (100%带爱心) ----------
         function Meteor(x, y, angle, speed, length, color) {
             this.x = x || Math.random() * W;
             this.y = y || 0;
@@ -270,7 +270,7 @@
             this.life = 1;
             this.decay = 0.004 + Math.random() * 0.012;
             this.active = true;
-            this.hasHeart = Math.random() > 0.7;
+            this.hasHeart = true; // 100%带爱心
         }
 
         Meteor.prototype.update = function() {
@@ -304,12 +304,14 @@
             ctx.arc(this.x, this.y, 4 * this.life, 0, Math.PI * 2);
             ctx.fillStyle = '#fff9e6';
             ctx.fill();
-            if (this.hasHeart && this.life > 0.8) {
-                ctx.font = '14px Arial';
+
+            // 每颗流星都带爱心
+            if (this.life > 0.4) {
+                ctx.font = '16px Arial';
                 ctx.fillStyle = '#ff4d7a';
                 ctx.shadowBlur = 20;
                 ctx.shadowColor = '#ff4d7a';
-                ctx.fillText('❤️', this.x - 10, this.y - 20);
+                ctx.fillText('❤️', this.x - 12, this.y - 24);
             }
             ctx.shadowBlur = 0;
         };
@@ -326,6 +328,7 @@
             });
         }
 
+        // ---------- 生成流星 ----------
         function createShower(count) {
             count = count || 35;
             for (var i = 0; i < count; i++) {
@@ -340,20 +343,32 @@
             }
         }
 
-        // 初始流星
-        for (var i = 0; i < 15; i++) {
+        // 初始流星 (打开页面就有)
+        for (var i = 0; i < 20; i++) {
             (function(i) {
                 setTimeout(function() {
                     var x = Math.random() * W;
                     var y = Math.random() * H * 0.15;
-                    var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.5 - 0.25), 4 + Math.random() * 6, 70 + Math.random() * 50);
-                    m.decay = 0.006 + Math.random() * 0.008;
+                    var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.5 - 0.25), 5 + Math.random() * 8, 70 + Math.random() * 50);
+                    m.decay = 0.005 + Math.random() * 0.01;
                     meteors.push(m);
-                }, i * 200);
+                }, i * 150);
             })(i);
         }
 
-        // ---------- 展示照片 (修复定时器) ----------
+        // ---------- 持续生成流星 (每隔1秒自动生成2-3颗) ----------
+        setInterval(function() {
+            var count = 2 + Math.floor(Math.random() * 3);
+            for (var i = 0; i < count; i++) {
+                var x = Math.random() * W * 0.9 + W * 0.05;
+                var y = Math.random() * H * 0.2;
+                var m = new Meteor(x, y, Math.PI / 4 + (Math.random() * 0.6 - 0.3), 6 + Math.random() * 10, 80 + Math.random() * 60);
+                m.decay = 0.004 + Math.random() * 0.01;
+                meteors.push(m);
+            }
+        }, 1000);
+
+        // ---------- 展示照片 ----------
         var photoTimer = null;
 
         function showPhoto(imgSrc, captionText, showMessage) {
@@ -374,7 +389,6 @@
                 }, 3500);
             }
 
-            // 清除旧定时器，设置新定时器
             if (photoTimer) clearTimeout(photoTimer);
             photoTimer = setTimeout(function() {
                 frame.classList.remove('show');
@@ -383,7 +397,6 @@
         }
 
         // ---------- 点击事件 ----------
-        // 1. 点击画布 → 触发流星雨
         canvas.addEventListener('click', function(e) {
             createShower(45);
             for (var i = 0; i < 20; i++) {
@@ -402,14 +415,13 @@
             updateStarLabels();
 
             var msg = document.getElementById('message');
-            msg.innerHTML = '<span>🌠 流星划过 · 许愿有你</span>';
+            msg.innerHTML = '<span>🌠 流星雨 · 爱意永不停</span>';
             msg.style.opacity = 1;
             setTimeout(function() {
                 msg.style.opacity = 0;
             }, 2000);
         });
 
-        // 2. 点击牛郎星
         document.getElementById('labelAltair').addEventListener('click', function(e) {
             e.stopPropagation();
             createShower(20);
@@ -420,7 +432,6 @@
             );
         });
 
-        // 3. 点击织女星
         document.getElementById('labelVega').addEventListener('click', function(e) {
             e.stopPropagation();
             createShower(20);
@@ -464,19 +475,11 @@
                 m.draw(ctx);
             }
 
-            if (meteors.length < 6 && Math.random() < 0.03) {
-                var newMeteor = new Meteor(Math.random() * W, Math.random() * H * 0.1, Math.PI / 4 + (Math.random() * 0.6 - 0.3), 4 + Math.random() * 8);
-                newMeteor.decay = 0.006 + Math.random() * 0.01;
-                meteors.push(newMeteor);
-            }
-
             requestAnimationFrame(animate);
         }
 
-        // 启动动画
         animate();
 
-        // ---------- 窗口自适应 ----------
         window.addEventListener('resize', function() {
             W = window.innerWidth;
             H = window.innerHeight;
@@ -487,7 +490,6 @@
             updateStarLabels();
         });
 
-        // 移动端触摸事件支持
         canvas.addEventListener('touchstart', function(e) {
             var touch = e.touches[0];
             var clickEvent = new MouseEvent('click', {
